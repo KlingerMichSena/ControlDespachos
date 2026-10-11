@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distribuidora La Quinta S.A.S. - Control de Despachos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+    <div class="max-w-5xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="bg-indigo-900 text-white p-6 rounded-xl shadow-lg mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">Distribuidora La Quinta S.A.S.</h1>
+                <p class="text-indigo-200 text-sm">Sistema Automatizado de Control de Despachos y Existencias</p>
+            </div>
+            <div class="space-x-2">
+                <button onclick="switchTab('registro')" id="btn-registro" class="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg font-medium transition text-sm">Registrar Despacho</button>
+                <button onclick="switchTab('historial')" id="btn-historial" class="bg-indigo-800 hover:bg-indigo-700 px-4 py-2 rounded-lg font-medium transition text-sm">Historial de Movimientos</button>
+            </div>
+        </header>
+
+        <!-- Vista 1: Registro de Despacho -->
+        <main id="view-registro" class="bg-white p-8 rounded-xl shadow-md">
+            <h2 class="text-xl font-bold text-indigo-900 mb-6 border-b pb-2">Nuevo Registro de Despacho</h2>
+            
+            <form id="dispatchForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Nombre del Solicitante</label>
+                    <input type="text" id="solicitante" required class="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ej. Carlos Pérez">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Correo Institucional</label>
+                    <input type="email" id="correo" required class="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ej. cperez@laquinta.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Código del Producto</label>
+                    <input type="text" id="codigo_producto" required class="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ej. INS-0101">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Cantidad</label>
+                    <input type="number" id="cantidad" min="1" required class="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ej. 10">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Destino</label>
+                    <input type="text" id="destino" required class="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ej. Restaurante El Arriero - Cali">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Motivo</label>
+                    <select id="motivo" class="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="despacho">Despacho</option>
+                        <option value="traslado entre sedes">Traslado entre sedes</option>
+                        <option value="avería">Avería</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <button type="submit" id="submitBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition shadow-md">Enviar Despacho a Make</button>
+                </div>
+            </form>
+
+            <!-- Resultado del Webhook -->
+            <div id="responseBox" class="mt-8 hidden p-5 rounded-xl border">
+                <h3 class="font-bold text-lg mb-1" id="respTitle">Respuesta del Sistema</h3>
+                <p id="respMessage" class="text-sm"></p>
+                <div class="mt-3 text-xs text-slate-500" id="respDetails"></div>
+            </div>
+        </main>
+
+        <!-- Vista 2: Historial de Movimientos -->
+        <main id="view-historial" class="bg-white p-8 rounded-xl shadow-md hidden">
+            <h2 class="text-xl font-bold text-indigo-900 mb-6 border-b pb-2">Historial de Movimientos Registrados</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 border-b">
+                            <th class="p-3">Fecha / Hora</th>
+                            <th class="p-3">Solicitante</th>
+                            <th class="p-3">Producto</th>
+                            <th class="p-3">Cant</th>
+                            <th class="p-3">Destino</th>
+                            <th class="p-3">Motivo</th>
+                            <th class="p-3">Resultado</th>
+                            <th class="p-3">Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr class="border-b"><td colspan="8" class="p-4 text-center text-slate-500">Ejecuta casos en la vista de registro para ver el historial consolidado.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Cambiar entre pestañas
+        function switchTab(tab) {
+            if(tab === 'registro') {
+                document.getElementById('view-registro').classList.remove('hidden');
+                document.getElementById('view-historial').classList.add('hidden');
+                document.getElementById('btn-registro').className = 'bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg font-medium transition text-sm';
+                document.getElementById('btn-historial').className = 'bg-indigo-800 hover:bg-indigo-700 px-4 py-2 rounded-lg font-medium transition text-sm';
+            } else {
+                document.getElementById('view-registro').classList.add('hidden');
+                document.getElementById('view-historial').classList.remove('hidden');
+                document.getElementById('btn-historial').className = 'bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg font-medium transition text-sm';
+                document.getElementById('btn-registro').className = 'bg-indigo-800 hover:bg-indigo-700 px-4 py-2 rounded-lg font-medium transition text-sm';
+            }
+        }
+
+        // Manejo del Formulario y Webhook de Make
+        const WEBHOOK_URL = "https://hook.us2.make.com/1yiixxba4pz62crkjffkdrytbghl51yj";
+
+        document.getElementById('dispatchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.textContent = "Procesando...";
+            btn.disabled = true;
+
+            const data = {
+                solicitante: document.getElementById('solicitante').value,
+                correo: document.getElementById('correo').value,
+                codigo_producto: document.getElementById('codigo_producto').value,
+                cantidad: parseInt(document.getElementById('cantidad').value),
+                destino: document.getElementById('destino').value,
+                motivo: document.getElementById('motivo').value,
+                fecha_hora: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                const box = document.getElementById('responseBox');
+                const title = document.getElementById('respTitle');
+                const msg = document.getElementById('respMessage');
+                const details = document.getElementById('respDetails');
+
+                box.classList.remove('hidden');
+
+                // Estilos y títulos según el status devuelto por el Webhook Response de Make
+                if (result.status === 'APROBADO') {
+                    box.className = "mt-8 p-5 rounded-xl border bg-emerald-50 border-emerald-300 text-emerald-900";
+                    title.textContent = "✔ APROBADO";
+                } else if (result.status === 'APROBADO CON ALERTA') {
+                    box.className = "mt-8 p-5 rounded-xl border bg-amber-50 border-amber-300 text-amber-900";
+                    title.textContent = "⚠ APROBADO CON ALERTA (Stock bajo mínimo)";
+                } else if (result.status === 'RECHAZADO') {
+                    box.className = "mt-8 p-5 rounded-xl border bg-rose-50 border-rose-300 text-rose-900";
+                    title.textContent = "✖ RECHAZADO (Stock insuficiente)";
+                } else {
+                    // Para la Ruta 1 (Código inexistente / Ruta de respaldo)
+                    box.className = "mt-8 p-5 rounded-xl border bg-purple-50 border-purple-300 text-purple-900";
+                    title.textContent = "ℹ CÓDIGO INEXISTENTE";
+                }
+
+                // Asignamos dinámicamente el mensaje y los detalles enviados por Make
+                msg.textContent = result.message || "Procesado correctamente.";
+                details.textContent = `Saldo resultante: ${result.saldo_resultante !== undefined && result.saldo_resultante !== null ? result.saldo_resultante : 'N/A'} | Timestamp: ${data.fecha_hora}`;
+
+            } catch (error) {
+                alert("Error al conectar con el Webhook de Make: " + error);
+            } finally {
+                btn.textContent = "Enviar Despacho a Make";
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
